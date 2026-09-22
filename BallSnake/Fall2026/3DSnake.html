@@ -1,0 +1,118 @@
+<html>
+    <head><title>Karl Was Here</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />    
+</head>
+
+<script type="module">
+
+    import * as THREE from "./threejs/three.module.js";
+
+    async function getContent(url) {
+        try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                throw new Error(`Response status: ${response.status}`);
+            }
+
+            const result = await response.text();
+           // console.log(result);
+            return result;
+        } catch (error) {
+            console.error(error.message);
+            return "";
+        }
+    }
+
+    let camera, scene, renderer;
+    let balls=[];
+    let dists=[];
+
+    const vertexCode=await getContent("cable.vertex.glsl");
+    const fragmentCode=await getContent("cable.fragment.glsl");
+
+    let uniforms1;
+    function init() {
+        let can=document.getElementById('area');
+        camera = new THREE.PerspectiveCamera( 90, 300 / 300, 0.1, 100 );
+        camera.position.z = 5;
+        camera.position.y = 5;
+
+          uniforms1={
+            time:{value:0.0},
+            defaultColor: {value:new THREE.Vector3(0.0,0.0,1.0)}
+          } ;
+          let material = new THREE.ShaderMaterial( {
+            side: THREE.DoubleSide,
+            uniforms:uniforms1, 
+            vertexShader: vertexCode,
+            fragmentShader: fragmentCode
+          } );         
+        scene = new THREE.Scene();
+          for (let i=0;i<5;i++){
+            let geom=new THREE.SphereGeometry(0.5,16,8);
+            let mesh = new THREE.Mesh( geom, material );
+            mesh.position.y=5.0;
+            balls.push(mesh);
+            dists.push(1.0);
+            scene.add(mesh);
+          }
+        const size = 10;
+        const divisions = 10;
+        const gridHelper = new THREE.GridHelper( size, divisions );
+        scene.add( gridHelper );  
+
+        renderer = new THREE.WebGLRenderer( { antialias: true,canvas:can }  );
+        
+        renderer.setAnimationLoop( animate );
+     }
+
+
+    let mouseX=0.0,mouseY=0.0;
+    function mouseMoved(evt){
+        mouseX = (event.clientX-300.0)*10.0/600.0;
+        mouseY = (300.0-event.clientY)*10.0/600.0;
+    }
+    let accel=-0.1;
+    function updateBalls(time) {
+        for(let i=balls.length-1;i>0;i--)
+//          balls[i].setPosition(ball[i-1].getPosition());
+          balls[i].position.copy(balls[i-1].position);
+        let dx=mouseX-balls[0].position.x;
+        let dy=mouseY-balls[0].position.y;
+        let len=Math.sqrt(dx*dx+dy*dy);
+        
+        balls[0].position.x-=dists[0]*dx/len;
+        balls[0].position.y-=dists[0]*dy/len;
+    }
+    let dt=0.01;
+    function animate() {
+        uniforms1.time.value+=dt;
+        updateBalls(dt);
+        renderer.render( scene, camera );
+    }
+
+    init();
+
+    document.getElementById('upC').addEventListener('click',(evt)=>camera.position.y -= 0.5)
+    document.getElementById('downC').addEventListener('click',(evt)=>camera.position.y += 0.5)
+    document.getElementById('leftC').addEventListener('click',(evt)=>camera.position.x -= 0.5)
+    document.getElementById('rightC').addEventListener('click',(evt)=>camera.position.x += 0.5)
+
+    document.getElementById('area').addEventListener('mousemove',mouseMoved);
+</script>
+<style>
+    p {color:blue;}
+    canvas {background-color: pink;}
+</style>
+<body>
+<p>Camera Position:
+<button id="upC">^</button>
+<button id="downC">v</button>
+<button id="leftC">&lt;</button>
+<button id="rightC">></button></p>
+<canvas id="area" width="600px" height="600px">
+</canvas>
+</body>
+</html>
