@@ -1,0 +1,129 @@
+<html>
+    <head><title>Karl Was Here</title></head>
+    <script id="vertexShader"  type="x-shader/x-vertex">
+            varying vec2 our_uv;
+			void main(){
+                our_uv=uv;
+				gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+			//	gl_Position =  vec4(position, 1.0);
+			}
+</script>
+<script id="fragmentShader" type="x-shader/x-fragment">
+            varying vec2 our_uv;
+			void main() {
+              vec3 color=vec3(our_uv,0.5);
+			  gl_FragColor = vec4(color,1.0);
+			}
+</script>
+
+<script type="module">
+
+    import * as THREE from "./threejs/three.module.js";
+
+    let camera, scene, renderer;
+    let mesh;
+    let can;
+
+    function ourPlane() {
+        const start=-10;
+        const end=10;
+        const step=2;
+        let positions=[];
+        let indices=[];
+        let count=0;
+        for (let x=start;x<=end;x+=step){
+            for (let y=start;y<=end;y+=step){
+                let z0=Math.sqrt(x*x+y*y);
+                let z1=Math.sqrt((x-step)*(x-step)+y*y);
+                let z2=Math.sqrt((y-step)*(y-step)+x*x);
+                let z3=Math.sqrt((x-step)*(x-step)+(y-step)*(y-step));
+                let tri1=[x-step,y-step,z3,
+                          x   ,y   ,z0,
+                          x   ,y-step,z2
+                ];
+                let tri2=[x-step,y-step,z3,
+                          x   ,y   ,z0,
+                          x-step,y   ,z1
+                ];
+                let tri1Indices=[count,count+2,count+1];
+                let tri2Indices=[count+3,count+4,count+5];
+                positions=positions.concat(tri1);
+                positions=positions.concat(tri2);
+                indices=indices.concat(tri1Indices);
+                indices=indices.concat(tri2Indices);
+                count+=6;
+            }
+        }
+        console.log(positions);
+        console.log(indices);
+        let geometry = new THREE.BufferGeometry();
+        geometry.setAttribute(
+                'position',
+                new THREE.BufferAttribute(new Float32Array(positions), 3));
+        geometry.setIndex(indices);        
+        geometry.computeVertexNormals();
+        return geometry;
+    }
+
+    function ourTrivial(){
+        let positions=[1,1,1, 
+                         0,1,1, 
+                         0,0,1];
+        let indices=[0,1,2];
+        let uvs=[0,0,
+                 0,1,
+                 1,0,
+                ];
+        let geometry = new THREE.BufferGeometry();
+        geometry.setAttribute(
+                'position',
+                new THREE.BufferAttribute(new Float32Array(positions), 3));
+        geometry.setAttribute(
+                'uv',
+                new THREE.BufferAttribute(new Float32Array(uvs), 2));
+        geometry.setIndex(indices);        
+        geometry.computeVertexNormals();
+        return geometry;
+    }
+
+    function init() {
+        let can=document.getElementById('area');
+        camera = new THREE.PerspectiveCamera( 90, 300 / 300, 0.1, 100 );
+        camera.position.z = 5;
+
+        const geometry=ourTrivial();
+        //const geometry=ourPlane();
+        //const material = new THREE.MeshBasicMaterial({color: 0x7f7f7f});   
+        const material = new THREE.ShaderMaterial( {
+        side: THREE.DoubleSide, 
+        vertexShader: document.getElementById( 'vertexShader' ).textContent,
+        fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+    } );        
+        mesh = new THREE.Mesh( geometry, material );
+
+        scene = new THREE.Scene();
+        scene.add( mesh );
+
+        renderer = new THREE.WebGLRenderer( { antialias: true,canvas:can }  );
+        renderer.setAnimationLoop( animate );
+    }
+
+    function animate() {
+        mesh.rotation.x += 0.005;
+//        mesh.rotation.y += 0.01;
+
+        renderer.render( scene, camera );
+    }
+
+    window.onload=init();
+</script>
+<style>
+    p {color:blue;}
+    canvas {background-color: pink;}
+</style>
+<body>
+<p>Some content here.<button>Click Me</button></p>
+<canvas id="area" width="300px" height="300px">
+</canvas>
+</body>
+</html>

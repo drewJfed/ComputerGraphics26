@@ -1,0 +1,215 @@
+<html>
+    <head><title>Karl Was Here</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />    
+</head>
+
+<script type="module">
+
+    import * as THREE from "./threejs/three.module.js";
+
+    async function getContent(url) {
+        try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                throw new Error(`Response status: ${response.status}`);
+            }
+            const result = await response.text();
+            return result;
+        } catch (error) {
+            console.error(error.message);
+            return "";
+        }
+    }
+
+    const transformations=[    // fractal pattern using chaos game
+        new THREE.Matrix3(0.5,0.0,0.0,
+                          0.0,0.5,0.0,
+                          0.0,0.0,1.0),
+        new THREE.Matrix3(0.5,0.0,127.0,
+                          0.0,0.5,0.0,
+                          0.0,0.0,1.0),
+        new THREE.Matrix3(0.5,0.0,0.0,
+                          0.0,0.5,127.0,
+                          0.0,0.0,1.0),
+        //new THREE.Matrix3(0.5,0.0,127.0,
+        //                  0.0,0.5,127.0,
+        //                  0.0,0.0,1.0)
+                    ];
+    let dot=new THREE.Vector3(127.0,127.0,1.0);
+
+    let camera, scene, renderer;
+    let balls=[];
+    let dists=[];
+
+    const vertexCode=await getContent("cable.vertex.glsl");
+    const fragmentCode=await getContent("cable.fragment.glsl");
+
+    let uniforms1;
+
+    const canvas=document.getElementById('texture');
+    let texture=new THREE.CanvasTexture(canvas);
+
+    function init() {
+        let can=document.getElementById('area');
+        camera = new THREE.PerspectiveCamera( 90, 300 / 300, 0.1, 100 );
+        camera.position.z = 5;
+        camera.position.y = 5;
+
+          uniforms1={
+            time:{value:0.0},
+            defaultColor: {value:new THREE.Vector3(0.0,0.0,1.0)},
+            transformations: {value:[new THREE.Matrix3(0.5,0.0,0.0,
+                                                       0.0,0.5,0.0,
+                                                       0.0,1.0,1.0),
+                                     new THREE.Matrix3(0.5,0.0,0.0,
+                                                       0.0,0.5,0.0,
+                                                       1.0,1.0,1.0),
+                                     new THREE.Matrix3(0.5,0.0,0.0,
+                                                       0.0,0.5,0.0,
+                                                       0.0,0.0,1.0)]}
+          } ;
+          let material = new THREE.ShaderMaterial( {
+            side: THREE.DoubleSide,
+            uniforms:uniforms1, 
+            vertexShader: vertexCode,
+            fragmentShader: fragmentCode
+          } ); 
+        //const texture = new THREE.TextureLoader().load( 'textures/crate.gif' );
+        // Compute the image of the crate
+		texture.colorSpace = THREE.SRGBColorSpace;
+        const material2 = new THREE.MeshBasicMaterial( { map: texture, side: THREE.DoubleSide} );  
+        //material2.vertexShader=vertexCode;      
+        scene = new THREE.Scene();
+          for (let i=0;i<10;i++){
+            //let geom=new THREE.SphereGeometry(0.5,16,8);
+            let geom=new THREE.BoxGeometry();
+            //let mesh = new THREE.Mesh( geom, [material2,material2,material2,material2,material,material] );
+            let mesh = new THREE.Mesh( geom, material2 );
+            mesh.position.y=5.0;
+            mesh.position.x=i/5.0;
+            //mesh.position.z=i/5.0;
+            console.log(mesh.position.x);
+            balls.push(mesh);
+            dists.push(1.0);
+            scene.add(mesh);
+          }
+        const size = 10;
+        const divisions = 10;
+        const gridHelper = new THREE.GridHelper( size, divisions );
+        scene.add( gridHelper );  
+
+        renderer = new THREE.WebGLRenderer( { antialias: true,canvas:can }  );
+        
+        renderer.setAnimationLoop( animate );
+     }
+
+
+    let mouseX=0.0,mouseY=0.0;
+    function mouseMoved(evt){
+        mouseX = (event.clientX-300.0)*10.0/600.0;
+        mouseY = (300.0-event.clientY)*10.0/600.0;
+    }
+    let accel=-0.01;
+    function adjust(moveable,fixed,length,dt){
+        let b1=balls[moveable].position;
+        let b2=balls[fixed].position;
+        let current=b1.distanceTo(b2);
+        //let current=Math.sqrt((b1.x-b2.x)**2+(b1.y-b2.y)**2+(b1.z-b2.z)**2);
+        //console.log(b1,b2);
+        let factor=Math.sign(current-length);
+        if (Math.abs(current)>=0.1){
+            let d=new THREE.Vector3();
+            d.subVectors(b2,b1).multiplyScalar(factor/current);
+            b1.add(d.multiplyScalar(length*dt));
+        }
+    }
+    function updateBalls(dt) {
+        for (let i=0;i<balls.length;i++){
+            balls[i].rotation.y+=dt;
+           // balls[i].rotation.z+=dt/2.0;
+        }
+        let dx=balls[0].position.x-mouseX;
+        let dy=balls[0].position.y-(mouseY+5);
+        let len=Math.sqrt(dx*dx+dy*dy);
+        if (Math.abs(len)>0.001){
+          balls[0].position.x-=dists[0]*dx*dt/len;
+          balls[0].position.y-=dists[0]*dy*dt/len;
+         // for (let j=0;j<5;j++){
+            for (let i=0;i<balls.length-1;i++)
+              adjust(i+1,i,dists[i],dt);
+           // for (let i=balls.length-2;i>=0;i--)
+           //   adjust(i,i+1,dists[i],dt);
+         // }
+        }
+    }
+    let dt=0.01;
+    function animate() {
+        uniforms1.time.value+=dt;
+        updateBalls(dt);
+        texture.needsUpdate=true;
+        let index=Math.floor(Math.random()*transformations.length);
+        dot.applyMatrix3(transformations[index]);
+        ctx.beginPath();
+        ctx.arc(dot.x, dot.y,1,0,2*Math.PI);
+        ctx.stroke();
+        //console.log(index,dot.x,dot.y);
+        renderer.render( scene, camera );
+    }
+
+    const ctx=canvas.getContext("2d");
+    let grd = ctx.createLinearGradient(0, 0, 255, 0);
+    grd.addColorStop(0, "red");
+    grd.addColorStop(1, "white");
+
+    // Fill with gradient
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, 255, 255);    
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(255, 255);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(127,127,64,0,6.28);
+    ctx.stroke();
+    ctx.beginPath();
+    init();
+
+
+    document.getElementById('upC').addEventListener('click',(evt)=>camera.position.y -= 0.5)
+    document.getElementById('downC').addEventListener('click',(evt)=>camera.position.y += 0.5)
+    document.getElementById('leftC').addEventListener('click',(evt)=>camera.position.x -= 0.5)
+    document.getElementById('rightC').addEventListener('click',(evt)=>camera.position.x += 0.5)
+
+    document.getElementById('up').addEventListener('click',(evt)=>camera.rotation.x -= 0.1)
+    document.getElementById('down').addEventListener('click',(evt)=>camera.rotation.x += 0.1)
+    document.getElementById('left').addEventListener('click',(evt)=>camera.rotation.y -= 0.1)
+    document.getElementById('right').addEventListener('click',(evt)=>camera.rotation.y += 0.1)
+
+
+    document.getElementById('area').addEventListener('mousemove',mouseMoved);
+</script>
+<style>
+    p {color:blue;}
+    canvas {background-color: pink;}
+</style>
+<body>
+<p>Camera Position:
+<button id="upC">^</button>
+<button id="downC">v</button>
+<button id="leftC">&lt;</button>
+<button id="rightC">></button></p>
+<p>Camera Angle:
+<button id="up">^</button>
+<button id="down">v</button>
+<button id="left">&lt;</button>
+<button id="right">></button>
+</p>
+<canvas id="area" width="600px" height="600px">
+</canvas>
+<canvas id="texture" width="256px" height="256px" style="display:none">
+</canvas>
+</body>
+</html>

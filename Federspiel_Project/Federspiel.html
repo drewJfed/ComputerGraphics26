@@ -1,0 +1,45 @@
+<html>
+    <head><title>Federspiel Project</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    </head>
+
+</html>
+
+<script type="module">
+    import * as THREE from "./threejs/three.module.js";
+
+    async function getContent(url) {
+        try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                throw new Error(`Response status: ${response.status}`);
+            }
+            const result = await response.text();
+            return result;
+        } catch (error) {
+            console.error(error.message);
+            return "";
+        }
+    }
+
+    // -----Start Building Scene------------------------------------------------------------
+
+    let camera, scene, renderer;
+
+    const lightCode = getContent("lighting.glsl");  // import glsl file
+
+    const canvas=document.getElementById('texture');
+    let texture=new THREE.CanvasTexture(canvas);
+
+    function init() {
+
+        let can=document.getElementById('area');
+        camera = new THREE.PerspectiveCamera( 90, 300 / 300, 0.1, 100 );
+        camera.position.z = 5;
+        camera.position.y = 5;
+
+    }
+
+</script>
