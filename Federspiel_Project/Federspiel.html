@@ -7,6 +7,7 @@
 
 <script type="module">
     import * as THREE from "./threejs/three.module.js";
+    import { STLLoader } from "./threejs/jsm/Addons.js";
 
     async function getContent(url) {
         try {
@@ -26,6 +27,10 @@
 
     let camera, scene, renderer;
     let car = [];
+
+    const loader = new STLLoader();
+    const geom = await loader.loadAsync('./low_poly_e30_rally.stl');
+            
 
     const fragmentCode = getContent("lighting.glsl");  // import glsl file
 
@@ -60,8 +65,9 @@
         scene = new THREE.Scene();
           for (let i=0;i<1;i++){
             //let geom=new THREE.SphereGeometry(0.5,16,8);
-            let geom=new THREE.BoxGeometry();
+            //let geom=new THREE.BoxGeometry();
             //let mesh = new THREE.Mesh( geom, [material2,material2,material2,material2,material,material] );
+            
             let carMesh = new THREE.Mesh( geom, material2 );
             carMesh.position.y = 5.0;
             carMesh.position.x = 0.0;
