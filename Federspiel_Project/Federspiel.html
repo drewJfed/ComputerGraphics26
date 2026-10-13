@@ -5,155 +5,122 @@
     <meta http-equiv="Expires" content="0" />
     </head>
 
+
 <script type="module">
     import * as THREE from "./threejs/three.module.js";
-    import { STLLoader } from "./threejs/jsm/Addons.js";
+    import { STLLoader } from "./threejs/jsm/STLLoader.js";
+
 
     async function getContent(url) {
         try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                throw new Error(`Response status: ${response.status}`);
-            }
-            const result = await response.text();
-            return result;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Response status: ${response.status}`);
+            return await response.text();
         } catch (error) {
             console.error(error.message);
             return "";
         }
     }
 
-    // -----Start Building Scene------------------------------------------------------------
-
     let camera, scene, renderer;
     let car = [];
-
-    const loader = new STLLoader();
-    const geom = await loader.loadAsync('./low_poly_e30_rally.stl');
-            
-
-    const fragmentCode = getContent("lighting.glsl");  // import glsl file
-
-    let uniformsC;
-
-    const canvas=document.getElementById('texture');
-    let texture=new THREE.CanvasTexture(canvas);
-
-    function init() {
-
-        let can=document.getElementById('area');
-        camera = new THREE.PerspectiveCamera( 90, 300 / 300, 0.1, 100 );
-        camera.position.z = 5;
-        camera.position.y = 10;
-
-        uniformsC={
-            time:{value:0.0},
-            defaultColor: {value:new THREE.Vector3(0.0,0.0,1.0)}
-        } ;
-
-        //texture.colorSpace = THREE.SRGBColorSpace;
-        //const material2 = new THREE.ShaderMaterial({
-        //    side: THREE.DoubleSide,
-        //    uniforms: uniformsC,
-            //vertexShader: lightCode,
-            //fragmentShader: fragmentCode
-       // });
-        texture.colorSpace = THREE.SRGBColorSpace;
-        const material2 = new THREE.MeshBasicMaterial( { map: texture, side: THREE.DoubleSide} );  
-        //const material2 = new THREE.MeshBasicMaterial( { map: texture, side: THREE.DoubleSide} );  
-        //material2.vertexShader=vertexCode;      
-        scene = new THREE.Scene();
-          for (let i=0;i<1;i++){
-            //let geom=new THREE.SphereGeometry(0.5,16,8);
-            //let geom=new THREE.BoxGeometry();
-            //let mesh = new THREE.Mesh( geom, [material2,material2,material2,material2,material,material] );
-            
-            let carMesh = new THREE.Mesh( geom, material2 );
-            carMesh.position.y = 5.0;
-            carMesh.position.x = 0.0;
-            carMesh.position.z = 0.0;
-            scene.add(carMesh);
-            car.push(carMesh);
-            //dists.push(1.0);
-            //scene.add(car);
-          }
-          
-        const size = 15;
-        const divisions = 10;
-        const gridHelper = new THREE.GridHelper( size, divisions );
-        scene.add( gridHelper );  
-
-        renderer = new THREE.WebGLRenderer( { antialias:true, canvas:can }  );
-
-        renderer.setAnimationLoop( animate );
-    }
-
-    function updateCar(dt) {
-        for(let i = 0;i < car.length; i++){
-            car[i].rotation.y+=dt;
-        }
-    }
-
-
     let camTime = 0;
-    function spinCamera(cdt) {
-        camTime += cdt;
-        // Camera moves in circular motion
-        camera.position.x = 10*Math.cos(camTime);
-        camera.position.z = 10*Math.sin(camTime);
-
-        // Camera points toward center
-        camera.lookAt(0,5,0);
-    }
-
-    let dt=0.03;
+    let dt = 0.03;
     let camdt = 0.01;
-    function animate() {
-        //uniformsC.time.value+=dt;
-        updateCar(dt);
-        spinCamera(camdt);
-        texture.needsUpdate=true;
-        //let index=Math.floor(Math.random()*transformations.length);
-        //dot.applyMatrix3(transformations[index]);
-        //ctx.beginPath();
-        //ctx.arc(dot.x, dot.y,1,0,2*Math.PI);
-        //ctx.stroke();
-        //console.log(index,dot.x,dot.y);
-        //uniformsC.time.value+=0.01;
-        renderer.render( scene, camera );
-    }
 
+    const canvas = document.getElementById('texture');
+    let texture = new THREE.CanvasTexture(canvas);
 
-    const ctx=canvas.getContext("2d");
+    const ctx = canvas.getContext("2d");
     let grd = ctx.createLinearGradient(0, 0, 255, 0);
     grd.addColorStop(0, "blue");
     grd.addColorStop(1, "white");
-
-    // Fill with gradient
-    ctx.fillStyle = grd;   
+    ctx.fillStyle = grd;
     ctx.fillRect(0, 0, 255, 255);
 
+    async function init() {
+        const loader = new STLLoader();
+        const geom = await new Promise((resolve, reject) => {
+            loader.load(
+                './low_poly_e30_rally.stl',
+                (geometry) => resolve(geometry),
+                undefined,
+                (error) => reject(error)
+            );
+        });
+
+        // --- DEBUGGING: Check STL size and center ---
+        geom.computeBoundingBox();
+        const box = geom.boundingBox;
+        //console.log("Model Bounding Box:", box);
+        
+        // Center geometry to its own origin if it's way off-center
+        geom.center();
+
+        let can = document.getElementById('area');
+        camera = new THREE.PerspectiveCamera(90, 1, 0.1, 1000);
+        camera.position.set(0, 5, 15);
+
+        scene = new THREE.Scene();
+
+        // Use a MeshNormalMaterial or MeshStandardMaterial temporarily 
+        // to guarantee it shows up regardless of texture UV mapping!
+        const material = new THREE.MeshStandardMaterial({ 
+            color: 0x00ff00, 
+            roughness: 0.4,
+            metalness: 0.6,
+            side: THREE.DoubleSide 
+        });
+
+        // Add a light so MeshStandardMaterial can be seen
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+        directionalLight.position.set(5, 10, 7);
+        scene.add(directionalLight);
+
+        let carMesh = new THREE.Mesh(geom, material);
+
+        carMesh.scale.set(0.005, 0.005, 0.005); // make smaller
+
+        scene.add(carMesh);
+        car.push(carMesh);
+
+        const size = 15;
+        const divisions = 20;
+        const gridHelper = new THREE.GridHelper(size, divisions);
+        scene.add(gridHelper);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true, canvas: can });
+        renderer.setAnimationLoop(animate);
+
+        // UI Event Listeners
+        document.getElementById('downC').addEventListener('click', () => camera.position.y -= 1);
+        document.getElementById('upC').addEventListener('click', () => camera.position.y += 1);
+        document.getElementById('up').addEventListener('click', () => camdt += 0.005);
+        document.getElementById('down').addEventListener('click', () => camdt -= 0.005);
+    }
+
+    function updateCar(dt) {
+        for (let i = 0; i < car.length; i++) {
+            car[i].rotation.y += dt;
+        }
+    }
+
+    function spinCamera(cdt) {
+        camTime += cdt;
+        camera.position.x = 15 * Math.cos(camTime);
+        camera.position.z = 15 * Math.sin(camTime);
+        camera.lookAt(0, 0, 0);
+    }
+
+    function animate() {
+        updateCar(dt);
+        spinCamera(camdt);
+        renderer.render(scene, camera);
+    }
 
     init();
-
-
-    //document.getElementById('leftC').addEventListener('click',(evt)=>camera.rotation.y += 0.5)
-    //document.getElementById('rightC').addEventListener('click',(evt)=>camera.rotation.y -= 0.5)
-    document.getElementById('downC').addEventListener('click',(evt)=>camera.position.y -= 1)
-    document.getElementById('upC').addEventListener('click',(evt)=>camera.position.y += 1)
-
-    document.getElementById('up').addEventListener('click',(evt)=>camdt += 0.005)
-    document.getElementById('down').addEventListener('click',(evt)=>camdt -= 0.005)
-
-    /*
-    for(let i = 0;i < car.length; i++){
-        document.getElementById('up').addEventListener('click',(evt)=>car[i].rotation.x -= 0.1)
-        document.getElementById('down').addEventListener('click',(evt)=>car[i].rotation.x += 0.1)
-        document.getElementById('left').addEventListener('click',(evt)=>car[i].rotation.y -= 0.1)
-        document.getElementById('right').addEventListener('click',(evt)=>car[i].rotation.y += 0.1)
-    }
-        */
-
 </script>
 
 <style>
