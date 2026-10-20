@@ -24,9 +24,14 @@
 
     let camera, scene, renderer;
     let car = [];
+    let numberOfCars = 20;
+
     let camTime = 0;
+    let lightTime = 0;
     let dt = 0.03;
     let camdt = 0.01;
+    let lights = [];
+    let scale = 1.0;
 
     const canvas = document.getElementById('texture');
     let texture = new THREE.CanvasTexture(canvas);
@@ -49,13 +54,7 @@
             );
         });
 
-        // --- DEBUGGING: Check STL size and center ---
-        geom.computeBoundingBox();
-        const box = geom.boundingBox;
-        //console.log("Model Bounding Box:", box);
         
-        // Center geometry to its own origin if it's way off-center
-        geom.center();
 
         let can = document.getElementById('area');
         camera = new THREE.PerspectiveCamera(90, 1, 0.1, 1000);
@@ -66,25 +65,43 @@
         // Use a MeshNormalMaterial or MeshStandardMaterial temporarily 
         // to guarantee it shows up regardless of texture UV mapping!
         const material = new THREE.MeshStandardMaterial({ 
-            color: 0x00ff00, 
-            roughness: 0.4,
+            color: 0x00ffff, 
+            roughness: 0.2,
             metalness: 0.6,
             side: THREE.DoubleSide 
         });
 
-        // Add a light so MeshStandardMaterial can be seen
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
-        scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
-        directionalLight.position.set(5, 10, 7);
+        // ----------------LIGHT
+        //const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+        //scene.add(ambientLight);
+        let directionalLight = new THREE.DirectionalLight(0xffffff, 4); // (color, intensity)
+        directionalLight.position.set(0, 5*scale, 0);
         scene.add(directionalLight);
+        lights.push(directionalLight);
+        // ----------------------------------
 
-        let carMesh = new THREE.Mesh(geom, material);
 
-        carMesh.scale.set(0.005, 0.005, 0.005); // make smaller
+        // ---CAR-------------------
+        for(let i = 0; i < numberOfCars ; i++){ 
+            let carMesh = new THREE.Mesh(geom, material);
+            
+            carMesh.scale.set(scale / 200, scale / 200, scale / 200); // make smaller
 
-        scene.add(carMesh);
-        car.push(carMesh);
+            scene.add(carMesh);
+            car.push(carMesh);
+        }
+
+        let numCars = 0;
+        for (const c of car) {
+            numCars++;
+            // set car orientation
+            c.rotation.x = Math.PI / 2;
+            c.rotation.y = Math.PI;
+            c.position.y = 0.7 * scale;
+
+            c.position.z = 7 * scale * (numCars - 1);
+        }
+        // ---------------------------
 
         const size = 15;
         const divisions = 20;
@@ -94,28 +111,54 @@
         renderer = new THREE.WebGLRenderer({ antialias: true, canvas: can });
         renderer.setAnimationLoop(animate);
 
-        // UI Event Listeners
-        document.getElementById('downC').addEventListener('click', () => camera.position.y -= 1);
-        document.getElementById('upC').addEventListener('click', () => camera.position.y += 1);
-        document.getElementById('up').addEventListener('click', () => camdt += 0.005);
-        document.getElementById('down').addEventListener('click', () => camdt -= 0.005);
+        
+        // Listen for left and right arrow keys to change cam speed
+        document.body.addEventListener('keydown',(ev)=>{
+            ev.preventDefault();
+            if(ev.key=="ArrowLeft") {
+                camdt += 0.005
+            }
+        } )
+        document.body.addEventListener('keydown',(ev)=>{
+            ev.preventDefault();
+            if(ev.key=="ArrowRight") {
+                camdt -= 0.005
+            }
+        } )
+
+        // Listen for up and down arrow keys to move camera up and down
+        document.body.addEventListener('keydown',(ev)=>{
+            ev.preventDefault();
+            if(ev.key=="ArrowUp") {
+                camera.position.y += 1
+            }
+        } )
+        document.body.addEventListener('keydown',(ev)=>{
+            ev.preventDefault();
+            if(ev.key=="ArrowDown") {
+                camera.position.y -= 1
+            }
+        } )
     }
 
-    function updateCar(dt) {
-        for (let i = 0; i < car.length; i++) {
-            car[i].rotation.y += dt;
+    function updatelights(dt) {
+        lightTime += dt;
+        for (const v of lights){
+            v.position.x = -5 * Math.cos(lightTime);
+            v.position.z = 5 * Math.sin(lightTime);
         }
     }
 
     function spinCamera(cdt) {
         camTime += cdt;
-        camera.position.x = 15 * Math.cos(camTime);
-        camera.position.z = 15 * Math.sin(camTime);
-        camera.lookAt(0, 0, 0);
+        camera.position.x = 12 * Math.cos(camTime);
+        camera.position.z = 12 * Math.sin(camTime);
+        // point camera at center of road
+        camera.lookAt(0, scale, 0);
     }
 
     function animate() {
-        updateCar(dt);
+        updatelights(dt);
         spinCamera(camdt);
         renderer.render(scene, camera);
     }
@@ -128,13 +171,9 @@
     canvas {background-color: pink;}
 </style>
 <body>
-<p>Camera Height:
-<button id="upC">^</button>
-<button id="downC">v</button>
+<p>Adjust Camera Height with ^ and v Arrows
 </p>
-<p>Camera Speed:
-<button id="up">^</button>
-<button id="down">v</button>
+<p>Adjust Camera Rotation Speed with < and > Arrows
 </p>
 <canvas id="area" width="600px" height="600px">
 </canvas>

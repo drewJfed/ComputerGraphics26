@@ -12,7 +12,7 @@ varying vec2 our_uv;
 varying vec3 our_norm;
 
 void main() {
-    float pi=radians(180.0);
+    /*float pi=radians(180.0);
     float rad=fract(time);
     vec3 lightLoc=vec3(sin(time),cos(time),1)*10.0;
     float difangle=dot(our_norm,lightLoc)/length(lightLoc);
@@ -32,6 +32,8 @@ void main() {
     }
     gl_FragColor=clamp(gl_FragColor,0.0,1.0);
     gl_FragColor=vec4(light+light2+0.5*gl_FragColor.xyz,1.0);
+    */
+    
 }
 
 /*
