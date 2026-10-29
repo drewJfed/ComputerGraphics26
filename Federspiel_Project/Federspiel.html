@@ -23,12 +23,12 @@
     }
 
     const lightCode=await getContent("./lighting.glsl");
-    const lightPos = await getContent("./lightPosition.glsl");
+    const lightPos = await getContent("./lightPositions.glsl");
 
 
     let camera, scene, renderer;
     let car = [];
-    let numberOfCars = 1;
+    let numberOfCars = 3;
 
     let camTime = 0;
     let lightTime = 0;
@@ -59,13 +59,14 @@
 
         uniforms1={
             time: {value:0.0},
-            defaultColor: {value:new THREE.Vector3(0.0,0.0,1.0)},
+            defaultColor: {value:new THREE.Vector3(0.3,0.6,1.0)},
             lightLoc1: {value: new THREE.Vector3(0.0, 5.0, 5.0)},
-            lightColor1: {value: new THREE.Vector3(0.0, 0.25, 1.0)}        
+            LightColor1: {value: new THREE.Vector3(0.0, 0.25, 1.0)}        
         } ;
         const material = new THREE.ShaderMaterial( {
             side: THREE.DoubleSide,
             uniforms:uniforms1, 
+            transparency: true,
             vertexShader: lightPos,
             fragmentShader: lightCode
         })
@@ -77,7 +78,7 @@
         //     side: THREE.DoubleSide 
         // });
 
-        // ----------------LIGHT
+        // // ----------------LIGHT
         // let directionalLight = new THREE.DirectionalLight(0x0440ff, 4); // (color, intensity)
         // directionalLight.position.set(0, 5*scale, 0);
         // scene.add(directionalLight);
@@ -145,13 +146,13 @@
         } )
     }
 
-    function updatelights(dt) {
-        lightTime += dt;
-        for (const v of lights){
-            v.position.x = -5 * Math.cos(lightTime);
-            v.position.z = 5 * Math.sin(lightTime);
-        }
-    }
+    // function updatelights(dt) {
+    //     lightTime += dt;
+    //     for (const v of lights){
+    //         v.position.x = -5 * Math.cos(lightTime);
+    //         v.position.z = 5 * Math.sin(lightTime);
+    //     }
+    // }
 
     function spinCamera(cdt) {
         camTime += cdt;
@@ -161,15 +162,17 @@
         camera.lookAt(0, scale, 0);
     }
 
+    let totalTime = 0;
+
     function animate() {
-        updatelights(dt);
+        //updatelights(dt);
         spinCamera(camdt);
-        renderer.render(scene, camera);
 
+        totalTime += dt;
         if (uniforms1) {
-            uniforms1.time.value = dt;
-
+            uniforms1.time.value = totalTime;
         }
+
         renderer.render(scene, camera);
     }
 

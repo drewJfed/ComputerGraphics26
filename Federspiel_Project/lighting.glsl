@@ -4,18 +4,19 @@ uniform float time;
 uniform vec3 defaultColor;
 uniform vec3 lightLoc1,LightLoc2;
 uniform vec3 LightColor1,LightColor2;
-// uniform mat3 transformations[3];
 
-// varying vec3 our_pos;
+varying vec3 our_pos;
 
 void main() {
 
+    
+
     vec3 norm = normalize(our_norm); // makes a vector of length 1
 
-    vec3 dir = normalize(lightLoc1);
+    vec3 dir = normalize(lightLoc1 - our_pos);
 
     float diff = max(dot(norm, dir), 0.0);
-    vec3 diffuse = diff * lightColor1;
+    vec3 diffuse = diff * LightColor1;
 
     vec3 color= diffuse * defaultColor;
     gl_FragColor=vec4(color,1.0);
