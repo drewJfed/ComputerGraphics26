@@ -15,7 +15,7 @@ float rand(vec2 co) {
 }
 
 void main() {
-    vec3 color=vec3(1.0,1.0,1.0);
+    vec3 color=vec3(0.5,0.0,0.5);
  /*   for (float u=0.0;u<1.0;u+=0.05)
       for (float v=0.0;v<1.0;v+=0.05) {
         vec3 fPixel=vec3(u,v,1.0);
@@ -26,7 +26,7 @@ void main() {
           if (length(check-our_uv)<0.1) color=vec3(0.0,0.0,0.0);
         }
       }*/
-    gl_FragColor=vec4(color,1.0);
+    gl_FragColor=vec4(color,0.7);
  /* Mandelbrot shader 
     vec2 start=vec2(-2.0,-2.0);
     vec2 range=vec2(4.0,4.0);

@@ -22,9 +22,13 @@
         }
     }
 
+    const lightCode=await getContent("./lighting.glsl");
+    const lightPos = await getContent("./lightPosition.glsl");
+
+
     let camera, scene, renderer;
     let car = [];
-    let numberOfCars = 20;
+    let numberOfCars = 1;
 
     let camTime = 0;
     let lightTime = 0;
@@ -33,17 +37,10 @@
     let lights = [];
     let scale = 1.0;
 
-    const canvas = document.getElementById('texture');
-    let texture = new THREE.CanvasTexture(canvas);
-
-    const ctx = canvas.getContext("2d");
-    let grd = ctx.createLinearGradient(0, 0, 255, 0);
-    grd.addColorStop(0, "blue");
-    grd.addColorStop(1, "white");
-    ctx.fillStyle = grd;
-    ctx.fillRect(0, 0, 255, 255);
+    let uniforms1;
 
     async function init() {
+
         const loader = new STLLoader();
         const geom = await new Promise((resolve, reject) => {
             loader.load(
@@ -54,30 +51,37 @@
             );
         });
 
-        
-
         let can = document.getElementById('area');
         camera = new THREE.PerspectiveCamera(90, 1, 0.1, 1000);
         camera.position.set(0, 5, 15);
 
         scene = new THREE.Scene();
 
-        // Use a MeshNormalMaterial or MeshStandardMaterial temporarily 
-        // to guarantee it shows up regardless of texture UV mapping!
-        const material = new THREE.MeshStandardMaterial({ 
-            color: 0x00ffff, 
-            roughness: 0.2,
-            metalness: 0.6,
-            side: THREE.DoubleSide 
-        });
+        uniforms1={
+            time: {value:0.0},
+            defaultColor: {value:new THREE.Vector3(0.0,0.0,1.0)},
+            lightLoc1: {value: new THREE.Vector3(0.0, 5.0, 5.0)},
+            lightColor1: {value: new THREE.Vector3(0.0, 0.25, 1.0)}        
+        } ;
+        const material = new THREE.ShaderMaterial( {
+            side: THREE.DoubleSide,
+            uniforms:uniforms1, 
+            vertexShader: lightPos,
+            fragmentShader: lightCode
+        })
+
+        // const material = new THREE.MeshStandardMaterial({ 
+        //     color: 0x888888, 
+        //     roughness: 0.1,
+        //     metalness: 0.7,
+        //     side: THREE.DoubleSide 
+        // });
 
         // ----------------LIGHT
-        //const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
-        //scene.add(ambientLight);
-        let directionalLight = new THREE.DirectionalLight(0xffffff, 4); // (color, intensity)
-        directionalLight.position.set(0, 5*scale, 0);
-        scene.add(directionalLight);
-        lights.push(directionalLight);
+        // let directionalLight = new THREE.DirectionalLight(0x0440ff, 4); // (color, intensity)
+        // directionalLight.position.set(0, 5*scale, 0);
+        // scene.add(directionalLight);
+        // lights.push(directionalLight);
         // ----------------------------------
 
 
@@ -160,6 +164,12 @@
     function animate() {
         updatelights(dt);
         spinCamera(camdt);
+        renderer.render(scene, camera);
+
+        if (uniforms1) {
+            uniforms1.time.value = dt;
+
+        }
         renderer.render(scene, camera);
     }
 
