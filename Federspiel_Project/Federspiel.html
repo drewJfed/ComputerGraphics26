@@ -8,7 +8,7 @@
 
 <script type="module">
     import * as THREE from "./threejs/three.module.js";
-    import { STLLoader } from "./threejs/jsm/STLLoader.js";
+    import { OBJLoader } from "./threejs/jsm/OBJLoader.js";
 
 
     async function getContent(url) {
@@ -41,11 +41,11 @@
 
     async function init() {
 
-        const loader = new STLLoader();
-        const geom = await new Promise((resolve, reject) => {
+        const loader = new OBJLoader();
+        const loadedCar = await new Promise((resolve, reject) => {
             loader.load(
-                './low_poly_e30_rally.stl',
-                (geometry) => resolve(geometry),
+                './CarTexture.obj',
+                (object) => resolve(object),
                 undefined,
                 (error) => reject(error)
             );
@@ -57,53 +57,45 @@
 
         scene = new THREE.Scene();
 
-        uniforms1={
-            time: {value:0.0},
-            defaultColor: {value:new THREE.Vector3(0.3,0.6,1.0)},
-            lightLoc1: {value: new THREE.Vector3(0.0, 5.0, 5.0)},
-            LightColor1: {value: new THREE.Vector3(0.0, 0.25, 1.0)}        
-        } ;
-        const material = new THREE.ShaderMaterial( {
+        uniforms1 = {
+            time: { value: 0.0 },
+            defaultColor: { value: new THREE.Vector3(0.3, 0.6, 1.0) },
+            lightLoc1: { value: new THREE.Vector3(0.0, 5.0, 5.0) },
+            LightColor1: { value: new THREE.Vector3(0.0, 0.25, 1.0) }        
+        };
+
+        const material = new THREE.ShaderMaterial({
             side: THREE.DoubleSide,
-            uniforms:uniforms1, 
-            transparency: true,
+            uniforms: uniforms1, 
+            transparent: true,
             vertexShader: lightPos,
             fragmentShader: lightCode
-        })
-
-        // const material = new THREE.MeshStandardMaterial({ 
-        //     color: 0x888888, 
-        //     roughness: 0.1,
-        //     metalness: 0.7,
-        //     side: THREE.DoubleSide 
-        // });
-
-        // // ----------------LIGHT
-        // let directionalLight = new THREE.DirectionalLight(0x0440ff, 4); // (color, intensity)
-        // directionalLight.position.set(0, 5*scale, 0);
-        // scene.add(directionalLight);
-        // lights.push(directionalLight);
-        // ----------------------------------
-
+        });
 
         // ---CAR-------------------
-        for(let i = 0; i < numberOfCars ; i++){ 
-            let carMesh = new THREE.Mesh(geom, material);
+        for(let i = 0; i < numberOfCars; i++){ 
+            // 1. Clone the loaded object group
+            let carGroup = loadedCar.clone();
             
-            carMesh.scale.set(scale / 200, scale / 200, scale / 200); // make smaller
+            // 2. Apply your custom ShaderMaterial to all meshes inside the OBJ group
+            carGroup.traverse((child) => {
+                if (child.isMesh) {
+                    child.material = material;
+                }
+            });
+            
+            carGroup.scale.set(scale / 20, scale / 20, scale / 20); // make smaller
 
-            scene.add(carMesh);
-            car.push(carMesh);
+            scene.add(carGroup);
+            car.push(carGroup);
         }
 
         let numCars = 0;
         for (const c of car) {
             numCars++;
-            // set car orientation
-            c.rotation.x = Math.PI / 2;
+            // set car orientation (Object3D groups support position and rotation)
             c.rotation.y = Math.PI;
             c.position.y = 0.7 * scale;
-
             c.position.z = 7 * scale * (numCars - 1);
         }
         // ---------------------------
@@ -116,34 +108,33 @@
         renderer = new THREE.WebGLRenderer({ antialias: true, canvas: can });
         renderer.setAnimationLoop(animate);
 
-        
         // Listen for left and right arrow keys to change cam speed
-        document.body.addEventListener('keydown',(ev)=>{
+        document.body.addEventListener('keydown', (ev) => {
             ev.preventDefault();
-            if(ev.key=="ArrowLeft") {
-                camdt += 0.005
+            if (ev.key == "ArrowLeft") {
+                camdt += 0.005;
             }
-        } )
-        document.body.addEventListener('keydown',(ev)=>{
+        });
+        document.body.addEventListener('keydown', (ev) => {
             ev.preventDefault();
-            if(ev.key=="ArrowRight") {
-                camdt -= 0.005
+            if (ev.key == "ArrowRight") {
+                camdt -= 0.005;
             }
-        } )
+        });
 
         // Listen for up and down arrow keys to move camera up and down
-        document.body.addEventListener('keydown',(ev)=>{
+        document.body.addEventListener('keydown', (ev) => {
             ev.preventDefault();
-            if(ev.key=="ArrowUp") {
-                camera.position.y += 1
+            if (ev.key == "ArrowUp") {
+                camera.position.y += 1;
             }
-        } )
-        document.body.addEventListener('keydown',(ev)=>{
+        });
+        document.body.addEventListener('keydown', (ev) => {
             ev.preventDefault();
-            if(ev.key=="ArrowDown") {
-                camera.position.y -= 1
+            if (ev.key == "ArrowDown") {
+                camera.position.y -= 1;
             }
-        } )
+        });
     }
 
     // function updatelights(dt) {
