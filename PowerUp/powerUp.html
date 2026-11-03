@@ -1,0 +1,102 @@
+<html>
+    <head><title>Karl Was Here</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />    
+</head>
+
+<script type="module">
+
+    import { OrbitControls } from "./threejs/jsm/OrbitControls.js";
+    import * as THREE from "./threejs/three.module.js";
+    import { STLLoader } from "./threejs/jsm/STLLoader.js";
+
+    async function getContent(url) {
+        try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                throw new Error(`Response status: ${response.status}`);
+            }
+            const result = await response.text();
+            return result;
+        } catch (error) {
+            console.error(error.message);
+            return "";
+        }
+    }
+
+    let camera, scene, renderer;
+
+    const vertexCode=await getContent("powerUp.vertex.glsl");
+    const fragmentCode=await getContent("powerUp.fragment.glsl");
+
+    let uniforms;
+    let controls;
+
+    async function init() {
+        let can=document.getElementById('area');
+        camera = new THREE.PerspectiveCamera( 90, 300 / 300, 0.1, 100 );
+        camera.position.x = 2;
+        camera.position.y = 2;        
+        camera.position.z = 2;
+        uniforms={
+            time:{value:0.0}
+        };
+        const texture = new THREE.TextureLoader().load( 'uvMap.webp' );
+		texture.colorSpace = THREE.SRGBColorSpace;
+        const material2 = new THREE.MeshBasicMaterial( { map: texture, side: THREE.DoubleSide} ); 
+        const stone = new THREE.MeshBasicMaterial({color: 0x7f7f7f});  
+
+        let geom=new THREE.SphereGeometry(0.5,64,32);
+        const loader = new STLLoader();
+        let geom3 = await loader.loadAsync( 'low_poly_e30_rally.stl' );
+        //let geom2 = new THREE.OctahedronGeometry( 0.45, 0);
+        //let geom2=new THREE.BoxGeometry(1,1,1);
+        let material = new THREE.ShaderMaterial( {
+//            side: THREE.DoubleSide,
+            uniforms:uniforms,
+            transparent: true, 
+            vertexShader: vertexCode,
+            fragmentShader: fragmentCode
+        } ); 
+        scene = new THREE.Scene();
+        let mesh = new THREE.Mesh( geom3, material);
+        let mesh2= new THREE.Mesh(geom3,stone);
+        mesh.rotateX(-90*Math.PI/180.0);
+        mesh2.rotateX(-90*Math.PI/180.0);
+        mesh.scale.set(.005, .005, .005);
+        mesh2.scale.set(.005, .005, .005);
+        scene.add(mesh);
+        scene.add(mesh2);
+        const size = 10;
+        const divisions = 10;
+        const gridHelper = new THREE.GridHelper( size, divisions );
+        scene.add( gridHelper );  
+
+        renderer = new THREE.WebGLRenderer( { antialias: true,canvas:can }  );
+        controls = new OrbitControls( camera, renderer.domElement );
+        
+        renderer.setAnimationLoop( animate );
+     }
+
+
+    let dt=0.01;
+    function animate() {
+        uniforms.time.value+=dt;
+        controls.update();
+        renderer.render( scene, camera );
+    }
+
+    await init();
+</script>
+
+<style>
+    p {color:blue;}
+    canvas {background-color: pink;}
+</style>
+
+<body>
+<canvas id="area" width="600px" height="600px">
+</canvas>
+</body>
+</html>

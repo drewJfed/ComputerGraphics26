@@ -10,6 +10,7 @@
     import * as THREE from "./threejs/three.module.js";
     import { OBJLoader } from "./threejs/jsm/OBJLoader.js";
     import { MTLLoader } from "./threejs/jsm/MTLLoader.js";
+    import { OrbitControls } from "./threejs/jsm/OrbitControls.js";
 
     async function getContent(url) {
         try {
@@ -35,9 +36,11 @@
     let dt = 0.03;
     let camdt = 0.01;
     let lights = [];
-    let scale = 1.0;
+    let scale = 1.6;
 
     let uniforms1;
+
+    let controls;
 
     async function init() {
 
@@ -72,9 +75,9 @@
 
         scene = new THREE.Scene();
 
-        let directionalLight = new THREE.DirectionalLight(0xffffff, 5); // (color, intensity)
-        directionalLight.position.set(5, 10, 5);
-        scene.add(directionalLight);
+        // let directionalLight = new THREE.DirectionalLight(0xffffff, 5); // (color, intensity)
+        // directionalLight.position.set(5, 10, 5);
+        // scene.add(directionalLight);
 
         // uniforms1 = {
         //     time: { value: 0.0 },
@@ -91,6 +94,20 @@
         //     fragmentShader: lightCode
         // });
 
+        // const material = new THREE.MeshStandardMaterial({
+        //     color: 0x888888,
+        //     roughness: 0.1,
+        //     metalness: 0.7,
+        //     side: THREE.DoubleSide
+        // });
+
+        // ----------------LIGHT
+        let directionalLight = new THREE.DirectionalLight(0xffffff, 10); // (color, intensity)
+        directionalLight.position.set(5*scale, 5*scale, 0);
+        scene.add(directionalLight);
+        lights.push(directionalLight);
+        // ----------------------------------
+
         // ---CAR-------------------
         for(let i = 0; i < numberOfCars; i++){ 
             let carGroup = loadedCar.clone();
@@ -104,20 +121,23 @@
         let numCars = 0;
         for (const c of car) {
             numCars++;
-            // set car orientation (Object3D groups support position and rotation)
+            // set car orientation 
             c.rotation.y = Math.PI;
             c.position.y = 0.7 * scale;
             c.position.z = 7 * scale * (numCars - 1);
         }
         // ---------------------------
 
-        const size = 15;
-        const divisions = 20;
-        const gridHelper = new THREE.GridHelper(size, divisions);
+        const gridSize = 15;
+        const gridDivisions = 20;
+        const gridHelper = new THREE.GridHelper(gridSize, gridDivisions);
         scene.add(gridHelper);
 
         renderer = new THREE.WebGLRenderer({ antialias: true, canvas: can });
         renderer.setAnimationLoop(animate);
+
+        controls = new OrbitControls( camera, renderer.domElement );
+
 
         // Listen for left and right arrow keys to change cam speed
         document.body.addEventListener('keydown', (ev) => {
@@ -169,6 +189,8 @@
     function animate() {
         //updatelights(dt);
         spinCamera(camdt);
+
+        controls.update();   // doesn't work while spinCamera() runs
 
         totalTime += dt;
         if (uniforms1) {
