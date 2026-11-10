@@ -9,8 +9,6 @@ varying vec3 our_pos;
 
 void main() {
 
-    
-
     vec3 norm = normalize(our_norm); // makes a vector of length 1
 
     vec3 dir = normalize(lightLoc1 - our_pos);
